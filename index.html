@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หน้าหลัก - บัญชีรายรับ-รายจ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide-element"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background-color: #111827; color: #d1d5db; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .modal-backdrop { background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px); }
+        .inline-edit-input { background-color: #374151; border: 1px solid #4b5563; color: white; }
+        .star {
+            --angle: 0deg; --radius: 0px;
+            position: absolute; width: 10px; height: 10px;
+            background: radial-gradient(circle, #fef08a, #facc15);
+            border-radius: 50%; transform-origin: center;
+            animation: star-burst 0.8s ease-out forwards;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+        @keyframes star-burst {
+            0% { transform: rotate(var(--angle)) translateY(0) scale(0.5); opacity: 1; }
+            100% { transform: rotate(var(--angle)) translateY(var(--radius)) scale(0); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <span class="font-bold text-xl text-cyan-400">💸 My-Ledger</span>
+                <div class="flex space-x-4 text-gray-300">
+                    <a href="./index.html" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">หน้าหลัก</a>
+                    <a href="./process.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">จัดการกระเป๋าเงิน</a>
+                    <a href="./summary.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">สรุปทั้งหมด</a>
+                    <a href="./contact.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">ติดต่อเรา</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <main class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <div class="lg:col-span-1 bg-gray-800 rounded-xl p-4 shadow-lg h-fit">
+            <h2 class="text-lg font-semibold text-white border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><lucide-icon name="wallet"></lucide-icon> กระเป๋าเงินของฉัน</h2>
+            <div id="wallets-list" class="space-y-2 max-h-[75vh] overflow-y-auto pr-2"></div>
+        </div>
+        <div class="lg:col-span-2 space-y-6">
+            <div id="no-wallet-selected" class="bg-gray-800 rounded-xl p-6 text-center h-full flex flex-col justify-center items-center">
+                <lucide-icon name="wallet" class="w-12 h-12 text-gray-500 mb-4"></lucide-icon>
+                <h3 class="text-xl font-semibold text-white">กรุณาเลือกกระเป๋าเงิน</h3>
+                <p class="text-gray-400 mt-2">เลือกกระเป๋าเงินจากทางด้านซ้ายเพื่อดูรายละเอียด</p>
+            </div>
+            <div id="wallet-details" class="hidden space-y-6">
+                <div class="bg-gray-800 rounded-xl p-4 shadow-lg">
+                    <h2 id="summary-title" class="text-lg font-semibold text-white border-b border-gray-700 pb-2 mb-4">สรุปภาพรวม</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-4">
+                        <div class="bg-green-900/50 p-3 rounded-lg"><p class="text-sm text-green-300">รายรับจริง</p><p id="summary-income" class="text-2xl font-bold text-green-400">0 ฿</p></div>
+                        <div class="bg-red-900/50 p-3 rounded-lg"><p class="text-sm text-red-300">รายจ่ายจริง</p><p id="summary-expense" class="text-2xl font-bold text-red-400">0 ฿</p></div>
+                        <div class="bg-cyan-900/50 p-3 rounded-lg"><p class="text-sm text-cyan-300">คงเหลือสุทธิ</p><p id="summary-balance" class="text-2xl font-bold text-cyan-400">0 ฿</p></div>
+                    </div>
+                    <div class="h-60 w-full mt-4"><canvas id="summary-chart"></canvas></div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-4 shadow-lg">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                         <h2 class="text-lg font-semibold text-white">ประวัติธุรกรรม</h2>
+                         <button id="show-add-txn-modal-btn" class="flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md text-sm">
+                             <lucide-icon name="plus" size="16"></lucide-icon>
+                             เพิ่มรายการ
+                         </button>
+                    </div>
+                    <div id="transactions-list" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="add-txn-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden"> <form id="add-transaction-form" class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 border border-gray-700 space-y-4"> <h3 class="text-lg font-bold text-cyan-400">เพิ่มรายการใหม่</h3> <div> <label for="transaction-description" class="block text-sm font-medium text-gray-400 mb-1">คำอธิบาย</label> <input type="text" id="transaction-description" placeholder="เช่น ค่ากาแฟ, เงินเดือน" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"> </div> <div> <label for="transaction-amount" class="block text-sm font-medium text-gray-400 mb-1">จำนวนเงิน</label> <input type="number" id="transaction-amount" min="0.01" step="0.01" placeholder="0.00" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"> </div> <div class="flex gap-4"> <button type="button" id="type-income-btn" class="w-full font-bold py-2 px-4 rounded-md transition-colors bg-gray-600 hover:bg-gray-500 text-gray-300">รายรับ</button> <button type="button" id="type-expense-btn" class="w-full font-bold py-2 px-4 rounded-md transition-colors bg-red-600 text-white">รายจ่าย</button> </div> <div class="mt-6 flex justify-end gap-4"> <button type="button" id="cancel-add-txn-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md">ยกเลิก</button> <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md">เพิ่มรายการ</button> </div> </form> </div>
+    <div id="edit-txn-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden"> <form id="edit-txn-form" class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 border border-gray-700 space-y-4"> <h3 class="text-lg font-bold text-cyan-400">แก้ไขรายการ</h3> <input type="hidden" id="edit-txn-id"> <div> <label for="edit-txn-desc" class="block text-sm font-medium text-gray-400 mb-1">คำอธิบาย</label> <input type="text" id="edit-txn-desc" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"> </div> <div> <label for="edit-txn-amount" class="block text-sm font-medium text-gray-400 mb-1">จำนวนเงิน</label> <input type="number" id="edit-txn-amount" min="0.01" step="0.01" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"> </div> <div> <label for="edit-txn-date" class="block text-sm font-medium text-gray-400 mb-1">วันที่และเวลา</label> <input type="datetime-local" id="edit-txn-date" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"> </div> <div class="mt-6 flex justify-end gap-4"> <button type="button" id="cancel-edit-txn-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md">ยกเลิก</button> <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md">บันทึกการเปลี่ยนแปลง</button> </div> </form> </div>
+    <div id="delete-wallet-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden"> <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 border border-gray-700"> <h3 class="text-lg font-bold text-red-400 flex items-center gap-2"><lucide-icon name="alert-triangle"></lucide-icon>ยืนยันการลบบัญชี</h3> <p class="text-gray-300 my-4">การดำเนินการนี้จะลบบัญชี <strong id="delete-wallet-name" class="text-white"></strong> และธุรกรรมทั้งหมดที่เกี่ยวข้องอย่างถาวร</p> <label for="delete-confirm-input" class="text-sm font-semibold text-gray-400">หากต้องการยืนยัน, โปรดพิมพ์ <code class="text-cyan-400 bg-gray-900 px-2 py-1 rounded">1234</code> ลงในช่องด้านล่าง:</label> <input type="text" id="delete-confirm-input" autocomplete="off" class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 mt-2 text-white text-center tracking-widest" placeholder="----"> <div class="mt-6 flex justify-end gap-4"> <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md">ยกเลิก</button> <button id="confirm-delete-btn" disabled class="px-4 py-2 bg-red-800 text-white font-semibold rounded-md disabled:opacity-50 disabled:cursor-not-allowed">ยืนยันการลบ</button> </div> </div> </div>
+
+    <script type="module">
+        import * as db from './database.js';
+        import * as effects from './effects.js';
+        
+        let selectedWalletId = sessionStorage.getItem('selectedWalletId') || null;
+        let transactionType = 'expense';
+        let summaryChart = null;
+        let walletToDeleteId = null;
+
+        const walletsListEl = document.getElementById('wallets-list');
+        const transactionsListEl = document.getElementById('transactions-list');
+        const noWalletSelectedEl = document.getElementById('no-wallet-selected');
+        const walletDetailsEl = document.getElementById('wallet-details');
+        const summaryTitleEl = document.getElementById('summary-title');
+        const summaryIncomeEl = document.getElementById('summary-income');
+        const summaryExpenseEl = document.getElementById('summary-expense');
+        const summaryBalanceEl = document.getElementById('summary-balance');
+        
+        const addTxnModal = document.getElementById('add-txn-modal');
+        const showAddTxnModalBtn = document.getElementById('show-add-txn-modal-btn');
+        const cancelAddTxnBtn = document.getElementById('cancel-add-txn-btn');
+        const addTransactionForm = document.getElementById('add-transaction-form');
+        const typeIncomeBtn = addTransactionForm.querySelector('#type-income-btn');
+        const typeExpenseBtn = addTransactionForm.querySelector('#type-expense-btn');
+
+        const editTxnModal = document.getElementById('edit-txn-modal');
+        const editTxnForm = document.getElementById('edit-txn-form');
+        const cancelEditTxnBtn = document.getElementById('cancel-edit-txn-btn');
+        
+        const deleteWalletModal = document.getElementById('delete-wallet-modal');
+        const deleteWalletNameEl = document.getElementById('delete-wallet-name');
+        const deleteConfirmInput = document.getElementById('delete-confirm-input');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        
+        function getSummary(wallet, walletTransactions) {
+            // For summary cards: filter out transfers
+            const income = walletTransactions
+                .filter(t => t.type === 'income' && !t.isTransfer)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const expense = walletTransactions
+                .filter(t => t.type === 'expense' && !t.isTransfer)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            // For balance calculation: include everything
+            const totalIncomeForBalance = walletTransactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const totalExpenseForBalance = walletTransactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+                
+            const balance = (wallet.initialBalance || 0) + totalIncomeForBalance - totalExpenseForBalance;
+            return { income, expense, balance };
+        }
+
+        function renderWallets() {
+            const wallets = db.getWallets();
+            const transactions = db.getTransactions();
+            walletsListEl.innerHTML = '';
+            if (wallets.length === 0) {
+                walletsListEl.innerHTML = `<p class="text-gray-400 text-center p-4">ไม่มีกระเป๋าเงิน <br><a href="./process.html" class="text-cyan-400 hover:underline">ไปที่หน้าจัดการเพื่อสร้าง</a></p>`;
+                return;
+            }
+            
+            wallets.forEach(wallet => {
+                const walletTxns = transactions.filter(t => t.walletId === wallet.id);
+                const balance = getSummary(wallet, walletTxns).balance;
+                const walletEl = document.createElement('div');
+                walletEl.className = `p-3 rounded-lg transition-all duration-200 ${selectedWalletId === wallet.id ? 'bg-cyan-600 text-white shadow-md' : 'bg-gray-700'}`;
+                walletEl.innerHTML = `
+                    <div class="flex justify-between items-center cursor-pointer wallet-selector" data-id="${wallet.id}">
+                        <div class="flex-grow">
+                            <span class="wallet-name-display font-medium">${wallet.name}</span>
+                            <input type="text" value="${wallet.name}" class="wallet-name-input hidden w-full rounded-md p-1 text-sm inline-edit-input" />
+                        </div>
+                        <span class="wallet-balance font-bold ml-2 ${selectedWalletId === wallet.id ? 'text-white' : 'text-cyan-300'}">${balance.toLocaleString('th-TH')} ฿</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 border-t border-gray-600/50 pt-2">
+                       <button class="edit-wallet-btn p-1 text-gray-400 hover:text-cyan-400" data-id="${wallet.id}"><lucide-icon name="pencil" size="16"></lucide-icon></button>
+                       <button class="save-wallet-btn p-1 text-gray-400 hover:text-green-400 hidden" data-id="${wallet.id}"><lucide-icon name="check" size="16"></lucide-icon></button>
+                       <button class="delete-wallet-btn p-1 text-gray-400 hover:text-red-400" data-id="${wallet.id}" data-name="${wallet.name}"><lucide-icon name="trash-2" size="16"></lucide-icon></button>
+                    </div>`;
+                walletsListEl.appendChild(walletEl);
+            });
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('summary-chart').getContext('2d');
+            if (summaryChart) summaryChart.destroy();
+            summaryChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: [data.name], datasets: [ { label: 'รายรับจริง', data: [data.income], backgroundColor: '#48BB78', borderRadius: 4 }, { label: 'รายจ่ายจริง', data: [data.expense], backgroundColor: '#F56565', borderRadius: 4 } ] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#d1d5db' } } }, scales: { y: { ticks: { color: '#d1d5db' }, grid: { color: 'rgba(255,255,255,0.1)' } }, x: { ticks: { color: '#d1d5db' }, grid: { color: 'rgba(255,255,255,0.1)' } } } }
+            });
+        }
+
+        function renderWalletDetails() {
+            const wallets = db.getWallets();
+            const transactions = db.getTransactions();
+            const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+            
+            if (!selectedWallet) {
+                selectedWalletId = null;
+                sessionStorage.removeItem('selectedWalletId');
+                noWalletSelectedEl.style.display = 'flex';
+                walletDetailsEl.style.display = 'none';
+                return;
+            }
+
+            noWalletSelectedEl.style.display = 'none';
+            walletDetailsEl.style.display = 'block';
+            
+            const walletTransactions = transactions.filter(t => t.walletId === selectedWalletId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const { income, expense, balance } = getSummary(selectedWallet, walletTransactions);
+            
+            summaryTitleEl.textContent = `สรุปภาพรวม: ${selectedWallet.name}`;
+            summaryIncomeEl.textContent = `${income.toLocaleString('th-TH')} ฿`;
+            summaryExpenseEl.textContent = `${expense.toLocaleString('th-TH')} ฿`;
+            summaryBalanceEl.textContent = `${balance.toLocaleString('th-TH')} ฿`;
+            
+            renderChart({ name: selectedWallet.name, income, expense });
+
+            transactionsListEl.innerHTML = '';
+            if (walletTransactions.length === 0) {
+                 transactionsListEl.innerHTML = `<p class="text-gray-400 text-center p-4">ไม่มีประวัติธุรกรรม</p>`;
+            } else {
+                walletTransactions.forEach(t => {
+                    const el = document.createElement('div');
+                    const isTransfer = t.isTransfer;
+                    el.className = `bg-gray-700 p-3 rounded-lg flex items-center justify-between ${isTransfer ? 'opacity-60' : ''}`;
+                    el.innerHTML = `
+                        <div>
+                            <p class="font-medium text-white">${t.description}</p>
+                            <p class="text-xs text-gray-400">${new Date(t.createdAt).toLocaleString('th-TH')}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-lg ${t.type === 'income' ? (isTransfer ? 'text-blue-400' : 'text-green-400') : (isTransfer ? 'text-orange-400' : 'text-red-400')}">
+                                ${t.type === 'income' ? '+' : '-'} ${Number(t.amount).toLocaleString('th-TH')}
+                            </span>
+                            <button class="edit-txn-btn p-1 text-gray-400 hover:text-cyan-400" data-id="${t.id}"><lucide-icon name="pencil" size="16"></lucide-icon></button>
+                            <button class="delete-txn-btn p-1 text-gray-400 hover:text-red-400" data-id="${t.id}"><lucide-icon name="trash-2" size="16"></lucide-icon></button>
+                        </div>`;
+                    transactionsListEl.appendChild(el);
+                });
+            }
+        }
+        
+        function openEditTxnModal(transactionId) {
+            const transaction = db.getTransactions().find(t => t.id === transactionId);
+            if (!transaction) return;
+            document.getElementById('edit-txn-id').value = transaction.id;
+            document.getElementById('edit-txn-desc').value = transaction.description;
+            document.getElementById('edit-txn-amount').value = transaction.amount;
+            const date = new Date(transaction.createdAt);
+            date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+            document.getElementById('edit-txn-date').value = date.toISOString().slice(0, 16);
+            editTxnModal.classList.remove('hidden');
+        }
+
+        function refreshUI() {
+           renderWallets();
+           if(selectedWalletId) {
+               renderWalletDetails();
+           } else {
+               noWalletSelectedEl.style.display = 'flex';
+               walletDetailsEl.style.display = 'none';
+           }
+        }
+
+        walletsListEl.addEventListener('click', (e) => {
+            const selector = e.target.closest('.wallet-selector');
+            if (selector) { selectedWalletId = selector.dataset.id; sessionStorage.setItem('selectedWalletId', selectedWalletId); refreshUI(); return; }
+            const button = e.target.closest('button');
+            if (!button) return;
+            const walletId = button.dataset.id;
+            const walletItem = button.closest('.p-3');
+            const nameDisplay = walletItem.querySelector('.wallet-name-display');
+            const nameInput = walletItem.querySelector('.wallet-name-input');
+            const editBtn = walletItem.querySelector('.edit-wallet-btn');
+            const saveBtn = walletItem.querySelector('.save-wallet-btn');
+            if (button.classList.contains('edit-wallet-btn')) { nameDisplay.classList.add('hidden'); nameInput.classList.remove('hidden'); nameInput.focus(); editBtn.classList.add('hidden'); saveBtn.classList.remove('hidden'); }
+            else if (button.classList.contains('save-wallet-btn')) { const newName = nameInput.value.trim(); if (newName) { db.updateWallet(walletId, { name: newName }); refreshUI(); } }
+            else if (button.classList.contains('delete-wallet-btn')) { walletToDeleteId = walletId; deleteWalletNameEl.textContent = button.dataset.name; deleteWalletModal.classList.remove('hidden'); }
+        });
+
+        document.body.addEventListener('click', (e) => { if (e.target.closest('button, a')) effects.playClickSound(); });
+        showAddTxnModalBtn.addEventListener('click', () => { addTxnModal.classList.remove('hidden'); });
+        cancelAddTxnBtn.addEventListener('click', () => { addTxnModal.classList.add('hidden'); addTransactionForm.reset(); });
+
+        addTransactionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!selectedWalletId) { alert("กรุณาเลือกกระเป๋าเงินก่อน"); return; }
+            const description = addTransactionForm.querySelector('#transaction-description').value;
+            const amount = addTransactionForm.querySelector('#transaction-amount').value;
+            if (description.trim() === '' || amount <= 0) { alert("กรุณากรอกข้อมูลให้ครบถ้วน"); return; }
+            db.addTransaction(selectedWalletId, description, amount, transactionType);
+            effects.createStarBurst({ clientX: e.clientX, clientY: e.clientY });
+            addTransactionForm.reset(); addTxnModal.classList.add('hidden');
+            refreshUI();
+        });
+
+        typeIncomeBtn.addEventListener('click', () => { transactionType = 'income'; typeIncomeBtn.className = 'w-full font-bold py-2 px-4 rounded-md transition-colors bg-green-600 text-white'; typeExpenseBtn.className = 'w-full font-bold py-2 px-4 rounded-md transition-colors bg-gray-600 hover:bg-gray-500 text-gray-300'; });
+        typeExpenseBtn.addEventListener('click', () => { transactionType = 'expense'; typeExpenseBtn.className = 'w-full font-bold py-2 px-4 rounded-md transition-colors bg-red-600 text-white'; typeIncomeBtn.className = 'w-full font-bold py-2 px-4 rounded-md transition-colors bg-gray-600 hover:bg-gray-500 text-gray-300'; });
+
+        transactionsListEl.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+            const id = button.dataset.id;
+            if (button.classList.contains('delete-txn-btn')) { if (confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) { db.deleteTransaction(id); refreshUI(); } }
+            else if (button.classList.contains('edit-txn-btn')) { openEditTxnModal(id); }
+        });
+
+        cancelEditTxnBtn.addEventListener('click', () => editTxnModal.classList.add('hidden'));
+        editTxnForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-txn-id').value;
+            const updates = { description: document.getElementById('edit-txn-desc').value.trim(), amount: Number(document.getElementById('edit-txn-amount').value), createdAt: new Date(document.getElementById('edit-txn-date').value).toISOString() };
+            if (updates.description && updates.amount > 0) { db.updateTransaction(id, updates); editTxnModal.classList.add('hidden'); refreshUI(); }
+        });
+        
+        cancelDeleteBtn.addEventListener('click', () => { deleteWalletModal.classList.add('hidden'); deleteConfirmInput.value = ''; });
+        deleteConfirmInput.addEventListener('input', () => { confirmDeleteBtn.disabled = deleteConfirmInput.value !== '1234'; });
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (walletToDeleteId && deleteConfirmInput.value === '1234') {
+                const deletedWalletId = walletToDeleteId;
+                db.deleteWallet(walletToDeleteId);
+                walletToDeleteId = null;
+                deleteConfirmInput.value = '';
+                deleteWalletModal.classList.add('hidden');
+                if(selectedWalletId === deletedWalletId) { selectedWalletId = null; sessionStorage.removeItem('selectedWalletId'); }
+                refreshUI();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', refreshUI);
+    </script>
+</body>
+</html>

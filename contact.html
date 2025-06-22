@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ติดต่อเรา - บัญชีรายรับ-รายจ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide-element"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #111827;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-cyan-400">💸 My-Ledger</span>
+                </div>
+                <div class="flex space-x-4 text-gray-300">
+                    <a href="./index.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">หน้าหลัก</a>
+                    <a href="./process.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">จัดการกระเป๋าเงิน</a>
+                    <a href="./summary.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">สรุปทั้งหมด</a>
+                    <a href="./contact.html" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">ติดต่อเรา</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-4 md:p-6 max-w-2xl mx-auto">
+        <div class="bg-gray-800 rounded-xl p-8 shadow-lg text-center mt-10">
+            <h1 class="text-3xl font-bold text-white mb-6">ติดต่อผู้พัฒนา</h1>
+            <div class="space-y-6 text-left">
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-700 p-3 rounded-full">
+                        <lucide-icon name="mail" class="text-cyan-400"></lucide-icon>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Gmail</h2>
+                        <a href="mailto:lemonade.businesses@gmail.com" class="text-cyan-400 hover:underline">lemonade.businesses@gmail.com</a>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                     <div class="bg-gray-700 p-3 rounded-full">
+                        <lucide-icon name="phone" class="text-cyan-400"></lucide-icon>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Phone</h2>
+                        <a href="tel:0650715091" class="text-cyan-400 hover:underline">065-071-5091</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สรุปทั้งหมด - บัญชีรายรับ-รายจ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide-element"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background-color: #111827; color: #d1d5db; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <nav class="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <span class="font-bold text-xl text-cyan-400">💸 My-Ledger</span>
+                <div class="flex space-x-4 text-gray-300">
+                    <a href="./index.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">หน้าหลัก</a>
+                    <a href="./process.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">จัดการกระเป๋าเงิน</a>
+                    <a href="./summary.html" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">สรุปทั้งหมด</a>
+                    <a href="./contact.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">ติดต่อเรา</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <main class="p-4 md:p-6 max-w-7xl mx-auto space-y-8">
+        <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+            <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-3 mb-4 flex items-center gap-2">
+                <lucide-icon name="bar-chart-2"></lucide-icon> สรุปภาพรวมทั้งหมด
+            </h2>
+            <div id="overall-summary-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center"></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h3 class="text-lg font-semibold text-white mb-4">ยอดคงเหลือแต่ละกระเป๋า</h3>
+                <div class="h-80 w-full"><canvas id="wallet-balances-chart"></canvas></div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                 <h3 class="text-lg font-semibold text-white mb-4">รายรับ vs รายจ่าย (ไม่รวมรายการโยกย้าย)</h3>
+                <div class="h-80 w-full"><canvas id="income-expense-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+            <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-3 mb-4 flex items-center gap-2">
+                <lucide-icon name="history"></lucide-icon> ประวัติธุรกรรมทั้งหมด
+            </h2>
+            <div id="all-transactions-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-2"></div>
+        </div>
+    </main>
+    <script type="module">
+        import * as db from './database.js';
+
+        function getWalletSummary(wallet, allTransactions) {
+            const walletTransactions = allTransactions.filter(t => t.walletId === wallet.id);
+            // Income/Expense for cards and chart (real income/expense)
+            const income = walletTransactions
+                .filter(t => t.type === 'income' && !t.isTransfer)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const expense = walletTransactions
+                .filter(t => t.type === 'expense' && !t.isTransfer)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            // Balance calculation (includes transfers)
+            const totalIncomeForBalance = walletTransactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenseForBalance = walletTransactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const balance = (wallet.initialBalance || 0) + totalIncomeForBalance - totalExpenseForBalance;
+            
+            return { income, expense, balance };
+        }
+
+        function renderOverallSummary(wallets, transactions) {
+            let totalIncome = 0, totalExpense = 0, totalBalance = 0;
+            wallets.forEach(wallet => {
+                const summary = getWalletSummary(wallet, transactions);
+                totalIncome += summary.income;
+                totalExpense += summary.expense;
+                totalBalance += summary.balance;
+            });
+            const container = document.getElementById('overall-summary-cards');
+            container.innerHTML = `
+                <div class="bg-green-900/50 p-4 rounded-lg"><p class="text-sm text-green-300">รายรับจริงทั้งหมด</p><p class="text-2xl font-bold text-green-400">${totalIncome.toLocaleString('th-TH')} ฿</p></div>
+                <div class="bg-red-900/50 p-4 rounded-lg"><p class="text-sm text-red-300">รายจ่ายจริงทั้งหมด</p><p class="text-2xl font-bold text-red-400">${totalExpense.toLocaleString('th-TH')} ฿</p></div>
+                <div class="bg-cyan-900/50 p-4 rounded-lg"><p class="text-sm text-cyan-300">ยอดคงเหลือรวม</p><p class="text-2xl font-bold text-cyan-400">${totalBalance.toLocaleString('th-TH')} ฿</p></div>`;
+        }
+
+        function renderWalletBalancesChart(wallets, transactions) {
+            const ctx = document.getElementById('wallet-balances-chart').getContext('2d');
+            const labels = wallets.map(w => w.name);
+            const data = wallets.map(w => getWalletSummary(w, transactions).balance);
+            new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'ยอดคงเหลือ', data: data, backgroundColor: ['#2dd4bf', '#60a5fa', '#c084fc', '#f87171', '#fbbf24'], borderColor: '#1f2937', borderWidth: 2, borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#d1d5db' }, grid: { color: 'rgba(255,255,255,0.1)' } }, x: { ticks: { color: '#d1d5db' }, grid: { color: 'rgba(255,255,255,0.1)' } } } }
+            });
+        }
+        
+        function renderIncomeExpenseChart(wallets, transactions){
+            const ctx = document.getElementById('income-expense-chart').getContext('2d');
+            let totalIncome = 0, totalExpense = 0;
+             wallets.forEach(wallet => { 
+                 const summary = getWalletSummary(wallet, transactions); 
+                 totalIncome += summary.income; 
+                 totalExpense += summary.expense; 
+            });
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: ['รายรับจริงรวม', 'รายจ่ายจริงรวม'], datasets: [{ data: [totalIncome, totalExpense], backgroundColor: ['#48BB78', '#F56565'], hoverOffset: 4, borderColor: '#1f2937' }] },
+                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: '#d1d5db' } } } }
+            });
+        }
+        
+        function renderAllTransactions(wallets, transactions){
+            const container = document.getElementById('all-transactions-list');
+            if(transactions.length === 0){ container.innerHTML = `<p class="text-gray-400 text-center p-4">ไม่มีประวัติธุรกรรม</p>`; return; }
+            const sortedTransactions = [...transactions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            container.innerHTML = sortedTransactions.map(t => {
+                const wallet = wallets.find(w => w.id === t.walletId);
+                const isTransfer = t.isTransfer;
+                const amountColor = t.type === 'income' ? (isTransfer ? 'text-blue-400' : 'text-green-400') : (isTransfer ? 'text-orange-400' : 'text-red-400');
+                return `
+                    <div class="bg-gray-700 p-3 rounded-lg flex items-center justify-between ${isTransfer ? 'opacity-60' : ''}">
+                        <div><p class="font-medium text-white">${t.description}</p><p class="text-xs text-gray-400"><span class="font-semibold text-cyan-400">${wallet ? wallet.name : 'N/A'}</span> - ${new Date(t.createdAt).toLocaleString('th-TH')}</p></div>
+                        <span class="font-bold text-lg ${amountColor}">${t.type === 'income' ? '+' : '-'} ${Number(t.amount).toLocaleString('th-TH')}</span>
+                    </div>`;
+            }).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const wallets = db.getWallets();
+            const transactions = db.getTransactions();
+            renderOverallSummary(wallets, transactions);
+            renderWalletBalancesChart(wallets, transactions);
+            renderIncomeExpenseChart(wallets, transactions);
+            renderAllTransactions(wallets, transactions);
+        });
+    </script>
+</body>
+</html>

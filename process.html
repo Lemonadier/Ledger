@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการกระเป๋าเงิน - บัญชีรายรับ-รายจ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide-element"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #111827;
+            color: #d1d5db;
+        }
+         ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+
+        /* Toast Notification */
+        #toast-notification {
+            visibility: hidden;
+            min-width: 250px;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 10000;
+            right: 30px;
+            bottom: 30px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateY(150%);
+            opacity: 0;
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+        }
+
+        #toast-notification.show {
+            visibility: visible;
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <nav class="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                 <span class="font-bold text-xl text-cyan-400">💸 My-Ledger</span>
+                <div class="flex space-x-4 text-gray-300">
+                    <a href="./index.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">หน้าหลัก</a>
+                    <a href="./process.html" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">จัดการกระเป๋าเงิน</a>
+                    <a href="./summary.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">สรุปทั้งหมด</a>
+                    <a href="./contact.html" class="hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">ติดต่อเรา</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <main class="p-4 md:p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-8">
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-3 mb-4 flex items-center gap-2">
+                    <lucide-icon name="plus-circle"></lucide-icon> สร้างกระเป๋าเงินใหม่
+                </h2>
+                <form id="add-wallet-form" class="space-y-4">
+                    <input type="text" id="new-wallet-name" placeholder="ชื่อกระเป๋าเงิน (เช่น เงินสด, บัญชีธนาคาร)" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 focus:ring-cyan-500 focus:border-cyan-500">
+                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
+                        <lucide-icon name="plus"></lucide-icon> เพิ่มกระเป๋า
+                    </button>
+                </form>
+            </div>
+            <div id="transfer-section" class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-3 mb-4 flex items-center gap-2">
+                    <lucide-icon name="arrow-left-right"></lucide-icon> โยกย้ายเงิน
+                </h2>
+                <form id="transfer-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="from-wallet" class="block text-sm font-medium text-gray-400 mb-1">จาก</label>
+                            <select id="from-wallet" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white focus:ring-cyan-500 focus:border-cyan-500"></select>
+                        </div>
+                         <div>
+                            <label for="to-wallet" class="block text-sm font-medium text-gray-400 mb-1">ไปที่</label>
+                            <select id="to-wallet" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white focus:ring-cyan-500 focus:border-cyan-500"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="transfer-amount" class="block text-sm font-medium text-gray-400 mb-1">จำนวนเงิน</label>
+                        <input type="number" id="transfer-amount" placeholder="0.00" min="0.01" step="0.01" required class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
+                        <lucide-icon name="arrow-left-right"></lucide-icon> ยืนยันการโยกย้าย
+                    </button>
+                </form>
+                <p id="transfer-message" class="text-center text-gray-400 mt-4 hidden">ต้องมีอย่างน้อย 2 กระเป๋าเงินเพื่อทำการโยกย้าย</p>
+            </div>
+        </div>
+        <div class="lg:col-span-1">
+             <div class="bg-gray-800 rounded-xl p-6 shadow-lg h-fit sticky top-24">
+                <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-3 mb-4 flex items-center gap-2">
+                    <lucide-icon name="wallet"></lucide-icon> กระเป๋าทั้งหมด
+                </h2>
+                <div id="all-wallets-list" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+             </div>
+        </div>
+    </main>
+    
+    <!-- Toast Notification Element -->
+    <div id="toast-notification"></div>
+
+    <script type="module">
+        import * as db from './database.js';
+        import * as effects from './effects.js';
+
+        const addWalletForm = document.getElementById('add-wallet-form');
+        const transferForm = document.getElementById('transfer-form');
+        const fromWalletSelect = document.getElementById('from-wallet');
+        const toWalletSelect = document.getElementById('to-wallet');
+        const allWalletsList = document.getElementById('all-wallets-list');
+        const transferMessage = document.getElementById('transfer-message');
+
+        function getWalletSummary(wallet, allTransactions) {
+            const txns = allTransactions.filter(t => t.walletId === wallet.id);
+            const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+            const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+            return (wallet.initialBalance || 0) + income - expense;
+        }
+
+        async function renderAllWallets() {
+            const wallets = await db.getWallets();
+            const transactions = await db.getTransactions();
+            allWalletsList.innerHTML = '';
+            if (wallets.length === 0) {
+                 allWalletsList.innerHTML = `<p class="text-gray-400 text-center p-4">ยังไม่มีกระเป๋าเงิน</p>`;
+                 return;
+            }
+            wallets.forEach(wallet => {
+                const balance = getWalletSummary(wallet, transactions);
+                const el = document.createElement('div');
+                el.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center';
+                el.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-white">${wallet.name}</p>
+                        <p class="text-xs text-gray-400">สร้างเมื่อ: ${new Date(wallet.createdAt).toLocaleDateString('th-TH')}</p>
+                    </div>
+                    <p class="font-bold text-lg text-cyan-300">${balance.toLocaleString('th-TH')} ฿</p>
+                `;
+                allWalletsList.appendChild(el);
+            });
+        }
+
+        async function updateTransferForm() {
+            const wallets = await db.getWallets();
+            const transferSection = document.getElementById('transfer-section');
+            if (wallets.length >= 2) {
+                transferSection.style.display = 'block';
+                transferMessage.style.display = 'none';
+                fromWalletSelect.innerHTML = '';
+                toWalletSelect.innerHTML = '';
+                wallets.forEach(wallet => {
+                    const opt = document.createElement('option');
+                    opt.value = wallet.id; opt.textContent = wallet.name;
+                    fromWalletSelect.appendChild(opt.cloneNode(true));
+                    toWalletSelect.appendChild(opt);
+                });
+                if (fromWalletSelect.options.length > 1) toWalletSelect.selectedIndex = 1;
+            } else {
+                transferSection.style.display = 'none';
+                transferMessage.style.display = 'block';
+            }
+        }
+        
+        async function refreshPage() {
+            await updateTransferForm();
+            await renderAllWallets();
+        }
+
+        addWalletForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('new-wallet-name').value;
+            if (name.trim() === '') {
+                effects.showToast("กรุณาตั้งชื่อกระเป๋าเงิน", true); // Show error toast
+                return;
+            }
+            await db.addWallet(name);
+            effects.showToast(`สร้างกระเป๋าเงิน '${name}' สำเร็จ!`); // Show success toast
+            effects.createStarBurst({ clientX: e.clientX, clientY: e.clientY });
+            addWalletForm.reset();
+            await refreshPage();
+        });
+
+        transferForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fromId = fromWalletSelect.value;
+            const toId = toWalletSelect.value;
+            const amount = document.getElementById('transfer-amount').value;
+            if (fromId === toId) {
+                effects.showToast("กรุณาเลือกกระเป๋าให้แตกต่างกัน", true);
+                return;
+            }
+            if (amount <= 0) {
+                effects.showToast("จำนวนเงินต้องมากกว่า 0", true);
+                return;
+            }
+            await db.transferFunds(fromId, toId, amount);
+            effects.showToast(`ย้ายเงิน ${Number(amount).toLocaleString('th-TH')} ฿ สำเร็จ!`);
+            effects.createStarBurst({ clientX: e.clientX, clientY: e.clientY });
+            transferForm.reset();
+            await refreshPage();
+        });
+
+        document.body.addEventListener('click', (e) => { if (e.target.closest('button, a')) effects.playClickSound(); });
+        document.addEventListener('DOMContentLoaded', refreshPage);
+    </script>
+</body>
+</html>
