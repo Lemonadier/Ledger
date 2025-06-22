@@ -5,14 +5,8 @@
  */
 
 const initialData = {
-    wallets: [
-        { "id": "w1", "name": "เงินสด", "initialBalance": 0, "createdAt": "2025-06-23T10:00:00.000Z" },
-        { "id": "w2", "name": "บัญชีธนาคาร", "initialBalance": 0, "createdAt": "2025-06-23T10:01:00.000Z" }
-    ],
-    transactions: [
-        { "id": "t1", "walletId": "w1", "type": "expense", "description": "ซื้อกาแฟ", "amount": 70, "createdAt": "2025-06-23T11:00:00.000Z" },
-        { "id": "t2", "walletId": "w2", "type": "income", "description": "เงินเดือน", "amount": 25000, "createdAt": "2025-06-23T12:00:00.000Z" }
-    ]
+    wallets: [],
+    transactions: []
 };
 
 function getFromStorage(key) {
